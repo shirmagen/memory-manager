@@ -46,10 +46,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Exceptions\MemoryOverflowException.cs" />
+    <Compile Include="Exceptions\NotEnoughAvailableMemoryException.cs" />
     <Compile Include="MemoryManager.cs" />
+    <Compile Include="MemoryNode.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tests\AsyncTest.cs" />
+    <Compile Include="Tests\FragmentationTest.cs" />
     <Compile Include="Tests\MemoryOverflowTest.cs" />
   </ItemGroup>
   <ItemGroup>

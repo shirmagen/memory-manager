@@ -9,15 +9,14 @@ namespace TwingateExrc.Tests
         public static void Run()
         {
             Console.WriteLine("Memory overflow tests start:");
-            var memory = new LinkedList<char>();
-            var m = new MemoryManager<char>(memory, 6);
+            var m = new MemoryManager(4);
 
-            m.Allocate('3', 1);
-            m.Allocate(new[] {'1', '1' }, 2); ;
-            m.Allocate('4', 1);
+            m.Allocate('3', 0);
+            m.Allocate(new[] {'1', '1' }, 1); ;
+            m.Allocate('4', 3);
             try
             {
-                m.Allocate('5', 1);
+                m.Allocate('5', 4);
             }
             catch (MemoryOverflowException)
             {

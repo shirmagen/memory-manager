@@ -1,92 +1,105 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using TwingateExrc.Exceptions;
 
 namespace TwingateExrc
 {
-    public class MemoryManager<T> 
+    public class MemoryManager
     {
-        public LinkedList<T> Buffer { get; set; } = new LinkedList<T>();
-        public int MaxSize { get; set; }
-        public LinkedList<int> AllocationHistory { get; set; } = new LinkedList<int>();
-        public MemoryManager(LinkedList<T> buffer, int size)
+        public LinkedList<int> PagesPointers { get; set; } = new LinkedList<int>();
+        public char[] Buffer { get; set; }
+
+        public MemoryManager(int size)
         {
-            EnsureBuffer(buffer, size);
-            Buffer = buffer;
-            MaxSize = size;
-            AllocationHistory.AddLast(size);
+            Buffer = new char[size];
+            SetBuffer(size);
         }
 
-        private void EnsureBuffer(LinkedList<T> buffer, int maxSize)
+        private void SetBuffer(int size)
         {
-            if (buffer.Count > maxSize)
+            for (int i = 0; i < size; i++)
             {
-                throw new Exception("Buffer data is larger than maximum size avialable");
+                PagesPointers.AddLast(i);
             }
         }
 
-        public void Allocate(T[] items, int size)
+        public void Allocate(char[] items, int page)
         {
+            if(items.Length > Buffer.Length || Buffer.Count(x => x == default(char)) < items.Length)
+            {
+                throw new NotEnoughAvailableMemoryException("not enough memory for this data");
+            }
+
+            int? newPage = page;
+            int? oldPage = null;
+
             lock (Buffer)
             {
-                lock (AllocationHistory)
+                lock (PagesPointers)
                 {
-
-                    BeforeAllocation(size);
 
                     foreach (var item in items)
                     {
-                        Buffer.AddLast(item);
+                        if (newPage == null)
+                        {
+                            throw new Exception("Internal Error - couldnwt allocate pages");
+                        }
+
+                        EnsureAllocation(newPage.Value);
+                        Buffer[newPage.Value] = item;
+                        
+                        if (PagesPointers.Find(newPage.Value).Next != null)
+                        {
+                            oldPage = newPage.Value;
+                            newPage = PagesPointers.Find(oldPage.Value).Next.Value;
+                        }
+                        else
+                        {
+                            newPage = null;
+                        }
+
+                        PagesPointers.Remove(oldPage.Value);
+
+                        
+
                     }
 
-
-                    AllocationHistory.AddLast(size);
                 }
             }
         }
 
-        public void Allocate(T item, int size = 1)
-        {
+        public void Allocate(char item, int page)
+        {   
             lock (Buffer)
             {
-                lock (AllocationHistory)
+                lock (PagesPointers)
                 {
-                    BeforeAllocation(size);
-                    Buffer.AddLast(item);
-
-                    AllocationHistory.AddLast(size);
+                    EnsureAllocation(page);
+                    Buffer[page] = item;
+                    PagesPointers.Remove(page);
                 }
             }
         }
-
-        private void BeforeAllocation(int size)
+        private void EnsureAllocation(int page)
         {
-            EnsureAllocation(size);
-        }
-
-        private void EnsureAllocation(int size)
-        {
-            if(Buffer.Count + size > MaxSize)
+            if (page > Buffer.Length - 1 || Buffer[page] != default(char))
             {
-                throw new MemoryOverflowException("Not enough memory for this allocation");
+                throw new MemoryOverflowException("page not avialable for this allocation");
             }
         }
 
-        public void Free()
+        public void Free(int page)
         {
-            lock (AllocationHistory)
+            lock (PagesPointers)
             {
-                lock(Buffer)
+                lock (Buffer)
                 {
-                    for (int i = 0; i < AllocationHistory.Last.Value; i++)
-                    {
-                        Buffer.RemoveLast();
-                    }
-
-                    AllocationHistory.RemoveLast();
+                    Buffer[page] = default(char);
+                    PagesPointers.AddLast(page);
                 }
             }
-           
+
         }
     }
 }
